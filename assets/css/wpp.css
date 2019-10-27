@@ -1,0 +1,27 @@
+.options-group.private-products p {
+    display: flex;
+    align-items: center;
+}
+
+.options-group.private-products {
+    margin: 10px;
+    background: #f7f7f7;
+    padding: 1px;
+}
+
+.options-group.private-products .dashicons {
+    margin-right: 10px;
+}
+
+.dashicons-lock::before {
+    color: #5997fb;
+}
+
+.product_data .woocommerce_options_panel {
+    min-height: 365px;
+}
+
+.ss-main .ss-content .ss-list {
+    max-height: 108px !important;
+}
+
