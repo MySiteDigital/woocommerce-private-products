@@ -1,0 +1,20 @@
+{
+    "name": "MySiteDigital/woocommerce-private-products",
+    "description": "This plugin allows you to sell some products to a select range of customers.",
+    "keywords": [
+        "wordpress",
+        "woocommerce",
+        "plugin"
+    ],
+    "homepage": "https://github.com/MySiteDigital/woocommerce-private-products",
+    "authors": [
+        {
+            "name": "MySite Digital",
+            "homepage": "http://mysite.digital"
+        }
+    ],
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.1"
+    }
+}
