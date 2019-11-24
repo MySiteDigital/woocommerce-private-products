@@ -6,7 +6,7 @@
  * Version: 1.0.0
  * Author: MySite Digital
  * Author URI: https://mysite.digital
- * Requires at least: 5.3
+ * Requires at least: 5.2
  */
 
 namespace MySiteDigital\WooCommerce;
@@ -55,38 +55,24 @@ if ( ! class_exists( 'PrivateProducts' ) ) {
             add_action( 'pre_get_posts', [ $this, 'hide_products' ] );
              
             // add the filter 
-            add_filter( 'woocommerce_product_related_posts_query', 'hide_products_from_related_posts', 10, 2 ); 
+            add_filter( 'woocommerce_related_products', [ $this, 'hide_private_products_from_related_posts' ], 10, 3 ); 
                       
-            add_action( 'woocommerce_product_options_general_product_data', [ $this, 'output_customer_dropdown' ] );
+            add_action( 'woocommerce_product_options_pricing', [ $this, 'output_customer_dropdown' ] );
             add_action( 'woocommerce_process_product_meta', [ $this, 'save_private_users' ] );
-
 
             add_action( 'admin_enqueue_scripts', [ $this, 'load_assets' ] );
         }
 
-         /**
-         * Returns the user's name to print
-         * in the dropdown list.
-         *
-         * @return string $user_name
-         */
-        protected function get_current_user() {
-            $user = wp_get_current_user();
-            $user_name = $user->data->user_login;
-
-            return $user_name;
-        }
 
          /**
          * Hide user-restricted products on the main shop and category pages
          * Woocommerce product loop
          * 
-         * @param WP_Query $query
+         * @param $query
          */
-        public function hide_products( WP_Query $query ) {
+        public function hide_products( $query ) {
 
-            if ( ! is_admin() && ( $query->query['post_type'] === 'product' || array_key_exists( 'product_cat', $query->query ) ) ) {
-
+            if ( ! is_admin() &&  ( ( isset( $query->query['post_type'] ) && $query->query['post_type'] === 'product' ) || array_key_exists( 'product_cat', $query->query ) ) ) {
                 $meta_query = [
                     'relation' => 'OR',
                     //if the current user can purchase the product
@@ -109,9 +95,32 @@ if ( ! class_exists( 'PrivateProducts' ) ) {
 	        return $query;
         }
 
-        public function hide_products_from_related_posts( $query ) { 
+        public function hide_private_products_from_related_posts( $related_posts, $product_id, $query_args ){ 
+            global $wpdb; 
 
-            return $query; 
+            $restricted_posts = $wpdb->get_results( 'SELECT post_id FROM '.  $wpdb->prefix . 'postmeta WHERE meta_key = "' . $this->select_id . '";' ); 
+
+            if( $restricted_posts ){
+                foreach ( $restricted_posts as $restricted_post ) {
+                    if ( ( $key = array_search( $restricted_post->post_id, $related_posts ) ) !== false ) {
+                        unset( $related_posts[ $key ] );
+                    }
+                } 
+            }
+            return $related_posts; 
+        }
+
+         /**
+         * Returns the user's name to print
+         * in the dropdown list.
+         *
+         * @return string $user_name
+         */
+        protected function get_current_user() {
+            $user = wp_get_current_user();
+            $user_name = $user->data->user_login;
+
+            return $user_name;
         }
 
 
@@ -143,6 +152,34 @@ if ( ! class_exists( 'PrivateProducts' ) ) {
             </div>
 
             <?php
+        }
+
+
+         /**
+         * Saves the product's meta.
+         * 
+         * @param int $post_id
+         */
+        public function save_private_users( $post_id ) {
+
+            if( ! isset( $_POST[ $this->select_id ] ) ){
+                delete_post_meta( $post_id, $this->select_id ); 
+                return false;
+            }
+
+            # Always store as array
+            $data = (array) $_POST[ $this->select_id ];
+            if ( !( isset( $_POST['woocommerce_meta_nonce'], $data ) || wp_verify_nonce( sanitize_key( $_POST['woocommerce_meta_nonce'] ), 'woocommerce_save_data' ) ) ) {
+                return false;
+            }
+            
+            $private_user = json_encode( $data );
+            
+            update_post_meta(
+                $post_id,
+                $this->select_id,
+                $private_user
+            ); 
         }
 
         /**
